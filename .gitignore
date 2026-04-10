@@ -29,10 +29,15 @@ env.bak/
 venv.bak/
 .venv/
 
-# FastAPI / Uvicorn
+# Środowisko i sekrety - WAŻNE
 .env
-.env.*
+.env.local
+.env.*.local
+# Zostawiamy.env.example - ma być w repo!
+
+# Logi FastAPI / Uvicorn
 *.log
+logs/
 
 # IDE - VS Code
 .vscode/
@@ -67,20 +72,20 @@ coverage.xml
 # Jupyter
 .ipynb_checkpoints
 
+# Docker - NIE COMMITUJ VOLUMES
+postgres_data/
+ollama_data/
+
 # Ollama / Modele - nie commituj modeli
 *.gguf
 *.bin
 
-# Uploady i dane testowe
+# Uploady i dane testowe - D4+
 uploads/
 temp/
 tmp/
-*.jpg
-*.jpeg
-*.png
-*.webp
-*.bmp
-*.gif
+# USUNIĘTE: *.jpg *.png itd.
+# Dlaczego: jak będziesz chciał mieć obrazki testowe w /backend/app/tests/fixtures/, to Cię zablokuje
 
 # Bazy danych SQLite
 *.db

@@ -1,17 +1,55 @@
 version: "3.8"
 
 services:
-  db:
-    image: postgres:15
-    container_name: bhp_postgres_db
+  postgres:
+    image: postgres:16-alpine
+    container_name: bhp_postgres
     environment:
-      POSTGRES_USER: bhp_admin
-      POSTGRES_PASSWORD: tajnehaslo123
-      POSTGRES_DB: bhp_auditor_db
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama
+    container_name: bhp_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # To jest ważne: startuje serwer, czeka 5s, pobiera model, potem czeka
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        sleep 5
+        ollama pull gemma3:4b
+        wait
+
+  backend:
+    # POPRAWKA linia 39: spacja po build:
+    build: ./backend
+    container_name: bhp_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      # POPRAWKA linia 44: spacja po myślniku
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  ollama_data:
