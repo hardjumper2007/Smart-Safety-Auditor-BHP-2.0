@@ -1,0 +1,261 @@
+.safe {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid;
+  position: sticky;
+  top: 0;
+  background-color: inherit;
+  z-index: 10;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  min-width: 80px;
+  text-align: left;
+}
+
+.topTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.shareIconBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.photo {
+  width: 100%;
+  height: 220px;
+  border-radius: 16px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+
+.scoreCard {
+  border-radius: 18px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid;
+}
+
+.scoreLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.statusIcon {
+  font-size: 32px;
+}
+
+.statusText {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.normText {
+  font-size: 12px;
+  margin: 2px 0 0 0;
+}
+
+.scoreCircle {
+  display: flex;
+  align-items: flex-end;
+}
+
+.scoreNumber {
+  font-size: 52px;
+  font-weight: 900;
+  line-height: 56px;
+}
+
+.scorePercent {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.riskBadge {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1.5px solid;
+}
+
+.riskLabel {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.riskValue {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.list {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid;
+}
+
+.hazardRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid;
+}
+
+.hazardRow:last-child {
+  border-bottom: none;
+}
+
+.hazardName {
+  flex: 1;
+  font-size: 14px;
+  margin: 0;
+}
+
+.sevBadge {
+  border-radius: 8px;
+  padding: 4px 10px;
+  border: 1px solid;
+}
+
+.sevText {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bulletRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid;
+}
+
+.bulletRow:last-child {
+  border-bottom: none;
+}
+
+.bullet {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.bulletText {
+  flex: 1;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+}
+
+.recRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  border-bottom: 1px solid;
+}
+
+.recRow:last-child {
+  border-bottom: none;
+}
+
+.recNum {
+  font-size: 16px;
+  font-weight: 800;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.recText {
+  flex: 1;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+}
+
+.clauseWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.clauseChip {
+  border-radius: 12px;
+  padding: 8px 12px;
+  border: 1px solid;
+}
+
+.clauseText {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shareBtn {
+  border: none;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.shareBtnText {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+}

@@ -1,0 +1,316 @@
+.safe {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topBar {
+  padding: 16px 20px;
+  border-bottom: 1px solid;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.card {
+  border-radius: 24px;
+  padding: 20px;
+  border: 1px solid;
+}
+
+.cardHeader {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 12px 0;
+}
+
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarText {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.userName {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.userEmail {
+  font-size: 14px;
+  margin: 2px 0 0 0;
+}
+
+.userId {
+  font-size: 12px;
+  margin: 4px 0 0 0;
+  font-family: monospace;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rowLabel {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.separator {
+  height: 1px;
+  margin: 14px 0;
+}
+
+.hueRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.hueCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.hueCircleActive {
+  border: 3px solid #fff;
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.customSlider {
+  flex: 1;
+  display: flex;
+  height: 20px;
+  align-items: center;
+  gap: 2px;
+}
+
+.sliderTick {
+  flex: 1;
+  height: 14px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.accentPreview {
+  border-radius: 14px;
+  padding: 12px;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.accentPreviewText {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.securityBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.pwdForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.input {
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 16px;
+  border: 1px solid;
+  outline: none;
+}
+
+.input::placeholder {
+  opacity: 0.5;
+}
+
+.btn {
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+}
+
+.btnText {
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.infoKey {
+  font-size: 14px;
+}
+
+.infoVal {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.logoutBtn {
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid;
+  cursor: pointer;
+  margin-top: 8px;
+  margin-bottom: 40px;
+}
+
+.logoutText {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 28px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: currentColor;
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
