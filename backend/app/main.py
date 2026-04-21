@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:latest")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:31b-cloud")
 
 app = FastAPI()
 
@@ -160,7 +160,7 @@ async def analyze(
     user_id: str = Form(...)
 ):
     logger.info(f"Analiza start: user={user_id}, norm={norm}, file={file.filename}")
-    
+
     content = await file.read()
     img_base64 = base64.b64encode(content).decode()
     logger.info(f"Obraz base64 length: {len(img_base64)}")
@@ -205,7 +205,7 @@ Wygeneruj 3-4 hazards. Bądź konkretny i techniczny."""
             )
 
         logger.info(f"Ollama status: {response.status_code}")
-        
+
         if response.status_code!= 200:
             logger.error(f"Ollama error: {response.text}")
             raise HTTPException(status_code=500, detail=f"Ollama error: {response.text}")
@@ -213,8 +213,7 @@ Wygeneruj 3-4 hazards. Bądź konkretny i techniczny."""
         data = response.json()
         result_text = data.get("response", "")
         logger.info(f"Ollama raw response: {result_text[:200]}...")
-        
-        # Czyścimy markdown jeśli Gemma go doda
+
         cleaned = result_text.strip()
         if cleaned.startswith("```json"):
             cleaned = cleaned[7:]
@@ -276,6 +275,25 @@ async def get_history(user_id: str):
         """, (user_id,))
         rows = cur.fetchall()
         return [dict(row) for row in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+@app.get("/api/audit/{audit_id}")
+async def get_audit(audit_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, created_at, norm, status, compliance_score, risk_level,
+                   hazards, non_compliances, recommendations, iso_clauses
+            FROM audits
+            WHERE id = %s
+        """, (audit_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Audit not found")
+        return dict(row)
     finally:
         cur.close()
         conn.close()

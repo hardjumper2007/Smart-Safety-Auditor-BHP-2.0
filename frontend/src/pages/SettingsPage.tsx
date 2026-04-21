@@ -118,7 +118,20 @@ export default function SettingsPage() {
             </span>
             <label className={styles.switch}>
               <input type="checkbox" checked={isDark} onChange={toggleTheme} />
-              <span className={styles.slider}></span>
+              <span
+                className={styles.slider}
+                style={{
+                  backgroundColor: isDark ? colors.accent : colors.border,
+                }}
+              >
+                <span
+                  className={styles.sliderKnob}
+                  style={{
+                    backgroundColor: isDark ? "#fff" : colors.textMuted,
+                    transform: isDark ? "translateX(20px)" : "translateX(0px)",
+                  }}
+                />
+              </span>
             </label>
           </div>
 

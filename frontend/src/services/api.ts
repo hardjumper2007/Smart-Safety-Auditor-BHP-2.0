@@ -4,10 +4,9 @@ const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 120000, // 2 minuty domyślnie
+  timeout: 120000,
 });
 
-// Pomocnicza funkcja do tworzenia FormData
 const createFormData = (data: Record<string, any>) => {
   const form = new FormData();
   Object.keys(data).forEach((key) => {
@@ -18,7 +17,6 @@ const createFormData = (data: Record<string, any>) => {
   return form;
 };
 
-// === AUTH ===
 export async function apiLogin(email: string, password: string) {
   const form = createFormData({ email, password });
   const res = await api.post("/api/login", form);
@@ -52,7 +50,6 @@ export async function apiUpdateAvatar(user_id: string, avatar: string) {
   return res.data;
 }
 
-// === ANALIZA ===
 export async function apiAnalyze(
   imageFile: File | Blob,
   userId: string,
@@ -70,7 +67,7 @@ export async function apiAnalyze(
 
   try {
     const res = await api.post("/api/analyze", form, {
-      timeout: 180000, // 3 min dla analizy
+      timeout: 180000,
     });
     return res.data;
   } catch (error: any) {
@@ -79,9 +76,13 @@ export async function apiAnalyze(
   }
 }
 
-// === HISTORIA ===
 export async function apiGetHistory(userId: string) {
   const res = await api.get(`/api/history/${userId}`);
+  return res.data;
+}
+
+export async function apiGetAuditDetails(auditId: number) {
+  const res = await api.get(`/api/audit/${auditId}`);
   return res.data;
 }
 

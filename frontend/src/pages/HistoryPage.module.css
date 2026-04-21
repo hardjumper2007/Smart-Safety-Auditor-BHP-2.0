@@ -91,7 +91,9 @@
   border: 1px solid;
   text-align: left;
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.2s;
+  transition:
+    transform 0.1s,
+    box-shadow 0.2s;
   width: 100%;
 }
 
@@ -183,4 +185,35 @@
 .emptySub {
   font-size: 14px;
   margin: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid;
+  overflow: hidden;
+}
+
+.cardContent {
+  cursor: pointer;
+  flex: 1;
+  padding: 16px;
+}
+
+.pdfBtn {
+  margin: 0 16px 16px 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pdfBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }

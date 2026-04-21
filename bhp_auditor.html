@@ -410,10 +410,10 @@
               m.name.includes("gemma4"),
             );
             if (hasGemma4) {
-              log("Model gemma4:latest dostępny");
+              log("Model gemma4:31b-cloud dostępny");
             } else {
               log(
-                "UWAGA: Brak gemma4:latest. Uruchom: docker exec -it ollama ollama pull gemma4:latest",
+                "UWAGA: Brak gemma4:31b-cloud. Uruchom: docker exec -it ollama ollama pull gemma4:31b-cloud",
               );
             }
           }
@@ -522,7 +522,7 @@
             headers: { "Content-Type": "application/json" },
             signal: controller.signal,
             body: JSON.stringify({
-              model: "gemma4:latest",
+              model: "gemma4:31b-cloud",
               prompt: `Jesteś ekspertem BHP audytującym zgodnie z normą ${norm}.
 
 Przeanalizuj zdjęcie stanowiska pracy. Zidentyfikuj:

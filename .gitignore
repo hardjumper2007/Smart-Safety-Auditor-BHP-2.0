@@ -39,6 +39,16 @@ venv.bak/
 *.log
 logs/
 
+# Node / Frontend - Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm
+.eslintcache
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
 # IDE - VS Code
 .vscode/
 !.vscode/settings.json
