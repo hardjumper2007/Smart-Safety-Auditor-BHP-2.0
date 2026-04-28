@@ -40,6 +40,7 @@ services:
     restart: unless-stopped
     environment:
       OLLAMA_ORIGINS: "*"
+      OLLAMA_API_KEY: 7ef4ef7a4eb542c5901fdc031e5139fb.gQ60TabVvDBMLiyft4TN5tnt
 
   backend:
     build: ./backend
