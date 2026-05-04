@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
-import jsPDF from "jspdf";
+import { apiUpdateNotes, apiGetAuditDetails } from "../services/api";
 import styles from "./AnalysisResultPage.module.css";
 
 interface Hazard {
@@ -20,22 +20,19 @@ interface AnalysisResult {
   iso_clauses: string[];
   created_at?: string;
   norm?: string;
+  user_notes?: string;
+  image_base64?: string;
+  facility_name?: string;
+  facility_logo?: string;
 }
 
-const SEVERITY_CONFIG: Record<
-  string,
-  { color: string; icon: string; label: string }
-> = {
+const SEV: Record<string, { color: string; icon: string; label: string }> = {
   niskie: { color: "#2ed573", icon: "🟢", label: "Niskie" },
   średnie: { color: "#ffa502", icon: "🟡", label: "Średnie" },
   wysokie: { color: "#ff6348", icon: "🟠", label: "Wysokie" },
   krytyczne: { color: "#ff4757", icon: "🔴", label: "Krytyczne" },
 };
-
-const RISK_CONFIG: Record<
-  string,
-  { color: string; bg: string; label: string }
-> = {
+const RISK: Record<string, { color: string; bg: string; label: string }> = {
   niskie: { color: "#2ed573", bg: "rgba(46,213,115,0.12)", label: "NISKIE" },
   średnie: { color: "#ffa502", bg: "rgba(255,165,2,0.12)", label: "ŚREDNIE" },
   wysokie: { color: "#ff6348", bg: "rgba(255,99,72,0.12)", label: "WYSOKIE" },
@@ -45,8 +42,7 @@ const RISK_CONFIG: Record<
     label: "KRYTYCZNE",
   },
 };
-
-const STATUS_CONFIG: Record<string, { icon: string; color: string }> = {
+const STATUS: Record<string, { icon: string; color: string }> = {
   Zgodne: { icon: "✅", color: "#2ed573" },
   "Częściowo zgodne": { icon: "⚠️", color: "#ffa502" },
   Niezgodne: { icon: "❌", color: "#ff4757" },
@@ -55,8 +51,7 @@ const STATUS_CONFIG: Record<string, { icon: string; color: string }> = {
 function formatDate(iso?: string) {
   if (!iso) return new Date().toLocaleDateString("pl-PL");
   try {
-    const d = new Date(iso);
-    return d.toLocaleDateString("pl-PL", {
+    return new Date(iso).toLocaleDateString("pl-PL", {
       day: "2-digit",
       month: "long",
       year: "numeric",
@@ -68,15 +63,32 @@ function formatDate(iso?: string) {
   }
 }
 
+function ensureDataUri(b64?: string, mime = "image/jpeg") {
+  if (!b64) return null;
+  if (b64.startsWith("data:")) return b64;
+  return `data:${mime};base64,${b64}`;
+}
+
 export default function AnalysisResultPage() {
   const { colors } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { result, imageUri } = (location.state || {}) as {
+  const {
+    result: initialResult,
+    imageUri,
+    facilityLogo,
+  } = (location.state || {}) as {
     result: AnalysisResult;
     imageUri?: string;
+    facilityLogo?: string;
   };
+
+  const [result, setResult] = useState<AnalysisResult>(initialResult);
+  const [notes, setNotes] = useState(initialResult?.user_notes || "");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   if (!result) {
     return (
@@ -88,161 +100,201 @@ export default function AnalysisResultPage() {
     );
   }
 
-  const risk =
-    RISK_CONFIG[result.risk_level?.toLowerCase()] || RISK_CONFIG.niskie;
-  const statusCfg =
-    STATUS_CONFIG[result.status] || STATUS_CONFIG["Częściowo zgodne"];
-
+  const risk = RISK[result.risk_level?.toLowerCase()] || RISK.niskie;
+  const statusCfg = STATUS[result.status] || STATUS["Częściowo zgodne"];
   const scoreColor = useMemo(() => {
     if (result.compliance_score >= 80) return "#2ed573";
     if (result.compliance_score >= 50) return "#ffa502";
     return "#ff4757";
   }, [result.compliance_score]);
 
-  const exportPDF = () => {
-    const doc = new jsPDF();
+  const saveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      await apiUpdateNotes(result.id, notes);
+      setResult((r) => ({ ...r, user_notes: notes }));
+      setNotesOpen(false);
+    } catch {
+      alert("Nie udało się zapisać uwag.");
+    } finally {
+      setSavingNotes(false);
+    }
+  };
 
-    doc.addFont(
-      "https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-regular-webfont.ttf",
-      "Roboto",
-      "normal",
-    );
-    doc.addFont(
-      "https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-bold-webfont.ttf",
-      "Roboto",
-      "bold",
-    );
-    doc.setFont("Roboto");
+  const exportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      const fullAudit: any = await apiGetAuditDetails(result.id);
 
-    const margin = 20;
-    let y = margin;
-    const lineHeight = 7;
-    const pageWidth = doc.internal.pageSize.width;
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
 
-    const addLine = (
-      text: string,
-      size = 11,
-      style: "normal" | "bold" = "normal",
-    ) => {
-      doc.setFontSize(size);
-      doc.setFont("Roboto", style);
-      const cleaned = text
-        .replace(/ą/g, "a")
-        .replace(/ć/g, "c")
-        .replace(/ę/g, "e")
-        .replace(/ł/g, "l")
-        .replace(/ń/g, "n")
-        .replace(/ó/g, "o")
-        .replace(/ś/g, "s")
-        .replace(/ź/g, "z")
-        .replace(/ż/g, "z")
-        .replace(/Ą/g, "A")
-        .replace(/Ć/g, "C")
-        .replace(/Ę/g, "E")
-        .replace(/Ł/g, "L")
-        .replace(/Ń/g, "N")
-        .replace(/Ó/g, "O")
-        .replace(/Ś/g, "S")
-        .replace(/Ź/g, "Z")
-        .replace(/Ż/g, "Z");
+      const createSection = (html: string) => {
+        const div = document.createElement("div");
+        div.style.width = "794px";
+        div.style.padding = "40px";
+        div.style.fontFamily = "Arial, sans-serif";
+        div.style.backgroundColor = "#ffffff";
+        div.style.color = "#000000";
+        div.style.pageBreakInside = "avoid";
+        div.style.breakInside = "avoid";
+        div.innerHTML = html;
+        return div;
+      };
 
-      const lines = doc.splitTextToSize(cleaned, pageWidth - margin * 2);
-      lines.forEach((line: string) => {
-        if (y > 280) {
-          doc.addPage();
-          y = margin;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = 210;
+      let isFirstPage = true;
+
+      const addSectionToPDF = async (sectionHtml: string) => {
+        const element = createSection(sectionHtml);
+        document.body.appendChild(element);
+
+        await new Promise((r) => setTimeout(r, 50));
+
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+
+        const imgData = canvas.toDataURL("image/png");
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        if (!isFirstPage) pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, imgHeight);
+        isFirstPage = false;
+
+        document.body.removeChild(element);
+      };
+
+      const riskLabel = fullAudit.risk_level?.toUpperCase() || "";
+      const scoreColorPDF =
+        fullAudit.compliance_score >= 80
+          ? "#2ed573"
+          : fullAudit.compliance_score >= 50
+            ? "#ffa502"
+            : "#ff4757";
+
+      await addSectionToPDF(`
+        <div style="margin-bottom: 20px;">
+          ${fullAudit.facility_logo ? `<img src="data:image/png;base64,${fullAudit.facility_logo}" style="width: 60px; height: 60px; object-fit: contain; float: left; margin-right: 15px;" />` : ""}
+          <h1 style="color: #0e87c7; font-size: 28px; margin: 0 0 10px 0;">Raport BHP #${fullAudit.id}</h1>
+          <p style="margin: 5px 0; font-size: 14px;">Data: ${formatDate(fullAudit.created_at)}</p>
+          <p style="margin: 5px 0; font-size: 14px;">Norma: ${fullAudit.norm || "PN-ISO 45001:2018"}</p>
+          ${fullAudit.facility_name ? `<p style="margin: 5px 0; font-size: 14px;">Zakład: ${fullAudit.facility_name}</p>` : ""}
+          <div style="clear: both;"></div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 2px solid #0e87c7;">
+          <thead>
+            <tr style="background: #0e87c7; color: white;">
+              <th style="padding: 12px; font-size: 14px; border: 1px solid #0e87c7;">Wynik zgodności</th>
+              <th style="padding: 12px; font-size: 14px; border: 1px solid #0e87c7;">Status</th>
+              <th style="padding: 12px; font-size: 14px; border: 1px solid #0e87c7;">Poziom ryzyka</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 15px; text-align: center; font-size: 18px; font-weight: bold; color: ${scoreColorPDF}; border: 1px solid #ddd;">${fullAudit.compliance_score}%</td>
+              <td style="padding: 15px; text-align: center; font-size: 16px; border: 1px solid #ddd;">${fullAudit.status}</td>
+              <td style="padding: 15px; text-align: center; font-size: 16px; font-weight: bold; border: 1px solid #ddd;">${riskLabel}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        ${
+          fullAudit.image_base64
+            ? `
+        <div style="margin: 25px 0;">
+          <h2 style="color: #0e87c7; font-size: 18px; margin: 0 0 10px 0;">Analizowane zdjęcie</h2>
+          <img src="data:image/jpeg;base64,${fullAudit.image_base64}" style="width: 100%; max-width: 700px; border: 1px solid #ddd;" />
+        </div>
+        `
+            : ""
         }
-        doc.text(line, margin, y);
-        y += lineHeight;
-      });
-    };
+      `);
 
-    const addSection = (title: string) => {
-      y += 4;
-      addLine(title, 14, "bold");
-      y += 2;
-    };
+      if ((fullAudit.hazards ?? []).length > 0) {
+        await addSectionToPDF(`
+          <h2 style="color: #0e87c7; font-size: 18px; margin: 0 0 10px 0;">Wykryte zagrożenia</h2>
+          <ul style="font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+            ${fullAudit.hazards.map((h: Hazard) => `<li>${h.name} [${SEV[h.severity?.toLowerCase()]?.label || h.severity}]</li>`).join("")}
+          </ul>
+        `);
+      }
 
-    doc.setFillColor(14, 165, 233);
-    doc.rect(0, 0, pageWidth, 25, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont("Roboto", "bold");
-    doc.text(`Raport BHP #${result.id}`, margin, 16);
+      if ((fullAudit.non_compliances ?? []).length > 0) {
+        await addSectionToPDF(`
+          <h2 style="color: #0e87c7; font-size: 18px; margin: 0 0 10px 0;">Niezgodności</h2>
+          <ol style="font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+            ${fullAudit.non_compliances.map((n: string) => `<li>${n}</li>`).join("")}
+          </ol>
+        `);
+      }
 
-    doc.setTextColor(0, 0, 0);
-    y = 35;
+      if ((fullAudit.recommendations ?? []).length > 0) {
+        await addSectionToPDF(`
+          <h2 style="color: #0e87c7; font-size: 18px; margin: 0 0 10px 0;">Zalecenia</h2>
+          <ol style="font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+            ${fullAudit.recommendations.map((r: string) => `<li>${r}</li>`).join("")}
+          </ol>
+        `);
+      }
 
-    addLine(`Data wygenerowania: ${formatDate(result.created_at)}`, 10);
-    addLine(`Norma: ${result.norm || "PN-ISO 45001:2018"}`, 10);
-    y += 3;
+      await addSectionToPDF(`
+        ${
+          (fullAudit.iso_clauses ?? []).length > 0
+            ? `
+        <h2 style="color: #0e87c7; font-size: 18px; margin: 0 0 10px 0;">Klauzule ISO</h2>
+        <p style="font-size: 14px; line-height: 1.8;">${fullAudit.iso_clauses.join(", ")}</p>
+        `
+            : ""
+        }
 
-    addSection("Podsumowanie");
-    addLine(`Wynik zgodnosci: ${result.compliance_score}%`, 12, "bold");
-    addLine(`Status: ${result.status}`, 11);
-    addLine(`Poziom ryzyka: ${result.risk_level.toUpperCase()}`, 11);
+        ${
+          fullAudit.user_notes
+            ? `
+        <h2 style="color: #0e87c7; font-size: 18px; margin: 25px 0 10px 0;">Uwagi inspektora</h2>
+        <p style="font-size: 14px; line-height: 1.8; white-space: pre-wrap;">${fullAudit.user_notes}</p>
+        `
+            : ""
+        }
 
-    const hazards = result.hazards ?? [];
-    if (hazards.length > 0) {
-      addSection("Wykryte zagrozenia");
-      hazards.forEach((h: Hazard, i: number) => {
-        const sev =
-          SEVERITY_CONFIG[h.severity?.toLowerCase()]?.label || h.severity;
-        addLine(`${i + 1}. ${h.name} [${sev}]`);
-      });
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 10px; color: #999;">
+          Wygenerowano przez Smart Safety Auditor
+        </div>
+      `);
+
+      pdf.save(`raport-BHP-${fullAudit.id}.pdf`);
+    } catch (err) {
+      console.error(err);
+      alert("Błąd podczas generowania PDF");
+    } finally {
+      setExportingPDF(false);
     }
-
-    const nonCompliances = result.non_compliances ?? [];
-    if (nonCompliances.length > 0) {
-      addSection("Niezgodnosci");
-      nonCompliances.forEach((item: string, i: number) => {
-        addLine(`${i + 1}. ${item}`);
-      });
-    }
-
-    const recommendations = result.recommendations ?? [];
-    if (recommendations.length > 0) {
-      addSection("Zalecenia");
-      recommendations.forEach((item: string, i: number) => {
-        addLine(`${i + 1}. ${item}`);
-      });
-    }
-
-    const isoClauses = result.iso_clauses ?? [];
-    if (isoClauses.length > 0) {
-      addSection("Klauzule ISO");
-      addLine(isoClauses.join(", "));
-    }
-
-    y = 285;
-    doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text("Wygenerowano przez Smart Safety Auditor", margin, y);
-
-    doc.save(`raport-BHP-${result.id}.pdf`);
   };
 
   const shareReport = async () => {
     const text =
       `🛡️ RAPORT BHP — #${result.id}\n\n` +
-      `Wynik zgodności: ${result.compliance_score}%\n` +
-      `Status: ${result.status}\n` +
+      `Wynik zgodności: ${result.compliance_score}%\nStatus: ${result.status}\n` +
       `Poziom ryzyka: ${result.risk_level}\n\n` +
       `Zagrożenia:\n${(result.hazards || []).map((h) => `• ${h.name} [${h.severity}]`).join("\n")}\n\n` +
       `Zalecenia:\n${(result.recommendations || []).map((r) => `• ${r}`).join("\n")}\n\n` +
       `Klauzule ISO: ${(result.iso_clauses || []).join(", ")}`;
-
     if (navigator.share) {
       try {
         await navigator.share({ title: `Raport BHP #${result.id}`, text });
-      } catch (err) {
-        console.error("Błąd udostępniania:", err);
-      }
+      } catch {}
     } else {
       navigator.clipboard.writeText(text);
       alert("Raport skopiowany do schowka");
     }
   };
+
+  const photoSrc = imageUri || ensureDataUri(result.image_base64);
 
   return (
     <div className={styles.safe} style={{ backgroundColor: colors.bg }}>
@@ -253,7 +305,7 @@ export default function AnalysisResultPage() {
           </span>
         </button>
         <h1 className={styles.topTitle} style={{ color: colors.text }}>
-          Wynik analizy #{result.id}
+          Wynik #{result.id}
         </h1>
         <button onClick={shareReport} className={styles.shareIconBtn}>
           <span style={{ color: colors.accent, fontSize: 24 }}>⎙</span>
@@ -261,9 +313,52 @@ export default function AnalysisResultPage() {
       </div>
 
       <div className={styles.container}>
-        {imageUri && (
+        {(result.facility_name || facilityLogo || result.facility_logo) && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 12,
+            }}
+          >
+            {ensureDataUri(
+              facilityLogo || result.facility_logo,
+              "image/png",
+            ) && (
+              <img
+                src={
+                  ensureDataUri(
+                    facilityLogo || result.facility_logo,
+                    "image/png",
+                  )!
+                }
+                alt="logo zakładu"
+                style={{
+                  width: 36,
+                  height: 36,
+                  objectFit: "contain",
+                  borderRadius: 6,
+                }}
+              />
+            )}
+            {result.facility_name && (
+              <span
+                style={{
+                  color: colors.textSecondary,
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}
+              >
+                {result.facility_name}
+              </span>
+            )}
+          </div>
+        )}
+
+        {photoSrc && (
           <img
-            src={imageUri}
+            src={photoSrc}
             className={styles.photo}
             alt="Analizowane zdjęcie"
           />
@@ -327,10 +422,8 @@ export default function AnalysisResultPage() {
                 borderColor: colors.border,
               }}
             >
-              {(result.hazards ?? []).map((hazard: Hazard, i: number) => {
-                const sev =
-                  SEVERITY_CONFIG[hazard.severity?.toLowerCase()] ||
-                  SEVERITY_CONFIG.niskie;
+              {result.hazards.map((hazard, i) => {
+                const sev = SEV[hazard.severity?.toLowerCase()] || SEV.niskie;
                 return (
                   <div
                     key={i}
@@ -377,7 +470,7 @@ export default function AnalysisResultPage() {
                 borderColor: colors.border,
               }}
             >
-              {(result.non_compliances ?? []).map((item: string, i: number) => (
+              {result.non_compliances.map((item, i) => (
                 <div
                   key={i}
                   className={styles.bulletRow}
@@ -411,7 +504,7 @@ export default function AnalysisResultPage() {
                 borderColor: colors.border,
               }}
             >
-              {(result.recommendations ?? []).map((item: string, i: number) => (
+              {result.recommendations.map((item, i) => (
                 <div
                   key={i}
                   className={styles.recRow}
@@ -441,7 +534,7 @@ export default function AnalysisResultPage() {
               📋 Klauzule ISO
             </h2>
             <div className={styles.clauseWrap}>
-              {(result.iso_clauses ?? []).map((cl: string, i: number) => (
+              {result.iso_clauses.map((cl, i) => (
                 <div
                   key={i}
                   className={styles.clauseChip}
@@ -462,12 +555,108 @@ export default function AnalysisResultPage() {
           </div>
         )}
 
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle} style={{ color: colors.text }}>
+            📝 Uwagi inspektora
+          </h2>
+          {!notesOpen ? (
+            <div>
+              {result.user_notes ? (
+                <p style={{ color: colors.textSecondary, marginBottom: 8 }}>
+                  {result.user_notes}
+                </p>
+              ) : (
+                <p
+                  style={{
+                    color: colors.textMuted,
+                    marginBottom: 8,
+                    fontStyle: "italic",
+                  }}
+                >
+                  Brak uwag
+                </p>
+              )}
+              <button
+                onClick={() => setNotesOpen(true)}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: 8,
+                  border: `1px solid ${colors.accent}`,
+                  backgroundColor: colors.accentLight,
+                  color: colors.accent,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                {result.user_notes ? "Edytuj uwagi" : "+ Dodaj uwagi"}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                style={{
+                  width: "100%",
+                  borderRadius: 8,
+                  padding: 10,
+                  backgroundColor: colors.bgSecondary,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.text,
+                  fontSize: 14,
+                  resize: "vertical",
+                  boxSizing: "border-box",
+                }}
+                placeholder="Wpisz swoje uwagi do audytu..."
+              />
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button
+                  onClick={saveNotes}
+                  disabled={savingNotes}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 8,
+                    border: "none",
+                    backgroundColor: colors.accent,
+                    color: "#fff",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                  }}
+                >
+                  {savingNotes ? "Zapisywanie..." : "Zapisz"}
+                </button>
+                <button
+                  onClick={() => {
+                    setNotes(result.user_notes || "");
+                    setNotesOpen(false);
+                  }}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 8,
+                    border: `1px solid ${colors.border}`,
+                    backgroundColor: colors.bgCard,
+                    color: colors.textSecondary,
+                    cursor: "pointer",
+                  }}
+                >
+                  Anuluj
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <button
           className={styles.shareBtn}
           style={{ backgroundColor: colors.accent }}
           onClick={exportPDF}
+          disabled={exportingPDF}
         >
-          <span className={styles.shareBtnText}>📄 Eksportuj raport PDF</span>
+          <span className={styles.shareBtnText}>
+            {exportingPDF ? "⏳ Generowanie..." : "📄 Eksportuj raport PDF"}
+          </span>
         </button>
       </div>
     </div>
