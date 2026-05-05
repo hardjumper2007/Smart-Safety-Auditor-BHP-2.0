@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { apiUpdateNotes, apiGetAuditDetails } from "../services/api";
@@ -89,6 +89,28 @@ export default function AnalysisResultPage() {
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [loadingFull, setLoadingFull] = useState(false);
+
+  useEffect(() => {
+    if (!initialResult?.id) return;
+    setLoadingFull(true);
+    apiGetAuditDetails(initialResult.id)
+      .then((full) => {
+        console.log("=== DANE Z API /api/audit/{id} ===");
+        console.log("PEŁNY OBIEKT:", full);
+        console.log("HAZARDS:", full.hazards);
+        console.log("ILE HAZARDS:", full.hazards?.length);
+        console.log("NON_COMPLIANCES:", full.non_compliances);
+        console.log("ILE NON_COMPLIANCES:", full.non_compliances?.length);
+        console.log("RECOMMENDATIONS:", full.recommendations);
+        console.log("ILE RECOMMENDATIONS:", full.recommendations?.length);
+        console.log("===================================");
+        setResult(full);
+        setNotes(full.user_notes || "");
+      })
+      .catch((e) => console.error("Błąd pobierania pełnego audytu:", e))
+      .finally(() => setLoadingFull(false));
+  }, [initialResult?.id]);
 
   if (!result) {
     return (
@@ -305,7 +327,7 @@ export default function AnalysisResultPage() {
           </span>
         </button>
         <h1 className={styles.topTitle} style={{ color: colors.text }}>
-          Wynik #{result.id}
+          Wynik #{result.id} {loadingFull && "..."}
         </h1>
         <button onClick={shareReport} className={styles.shareIconBtn}>
           <span style={{ color: colors.accent, fontSize: 24 }}>⎙</span>
@@ -413,7 +435,7 @@ export default function AnalysisResultPage() {
         {(result.hazards ?? []).length > 0 && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle} style={{ color: colors.text }}>
-              🔺 Wykryte zagrożenia
+              🔺 Wykryte zagrożenia ({result.hazards.length})
             </h2>
             <div
               className={styles.list}
@@ -461,7 +483,7 @@ export default function AnalysisResultPage() {
         {(result.non_compliances ?? []).length > 0 && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle} style={{ color: colors.text }}>
-              ❗ Niezgodności
+              ❗ Niezgodności ({result.non_compliances.length})
             </h2>
             <div
               className={styles.list}
@@ -495,7 +517,7 @@ export default function AnalysisResultPage() {
         {(result.recommendations ?? []).length > 0 && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle} style={{ color: colors.text }}>
-              💡 Zalecenia
+              💡 Zalecenia ({result.recommendations.length})
             </h2>
             <div
               className={styles.list}

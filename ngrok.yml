@@ -1,0 +1,14 @@
+version: "3"
+agent:
+  authtoken: 3DJMzxBjslkwRz5AO31jlj9mHKG_33cTyEnwiU2ZehCsax9fD
+tunnels:
+  backend:
+    proto: http
+    addr: 8000
+    domain: creature-unit-reexamine.ngrok-free.dev
+  frontend:
+    proto: http
+    addr: 5173
+  supabase:
+    proto: http
+    addr: 54323

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -27,13 +28,15 @@ interface NormRow {
 export default function SettingsPage() {
   const { colors, isDark, toggleTheme, hue, setHue } = useTheme();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  // Password
+  // Password - ZMIENIONE: dodane pwdErrors zamiast alertów
   const [oldPwd, setOldPwd] = useState("");
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
   const [pwdLoading, setPwdLoading] = useState(false);
   const [showPwdForm, setShowPwdForm] = useState(false);
+  const [pwdErrors, setPwdErrors] = useState<string[]>([]);
 
   // Facilities
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -68,30 +71,44 @@ export default function SettingsPage() {
   }, [selectedFacId]);
 
   // ─── password ─────────────────────────────────────────────
+  // ZMIENIONE: mechanika z Claude'a - walidacja + pwdErrors
   const handleChangePassword = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    const errors: string[] = [];
+
     if (!oldPwd || !newPwd || !confirmPwd) {
-      alert("Wypełnij wszystkie pola.");
-      return;
+      errors.push("❌ Wszystkie pola są wymagane");
     }
     if (newPwd !== confirmPwd) {
-      alert("Nowe hasła nie są identyczne.");
+      errors.push("❌ Nowe hasła nie są identyczne");
+    }
+    if (newPwd.length < 8) {
+      errors.push("❌ Hasło musi mieć co najmniej 8 znaków");
+    }
+    if (oldPwd === newPwd && newPwd.length > 0) {
+      errors.push("❌ Nowe hasło musi być różne od starego hasła");
+    }
+
+    if (errors.length > 0) {
+      setPwdErrors(errors);
       return;
     }
-    if (newPwd.length < 6) {
-      alert("Hasło musi mieć min 6 znaków.");
-      return;
-    }
+
+    setPwdErrors([]);
     setPwdLoading(true);
     try {
       await apiChangePassword(user!.user_id, oldPwd, newPwd);
-      alert("Hasło zostało zmienione.");
+      setPwdErrors(["✅ Hasło zostało zmienione pomyślnie"]);
       setOldPwd("");
       setNewPwd("");
       setConfirmPwd("");
-      setShowPwdForm(false);
+      setTimeout(() => {
+        setShowPwdForm(false);
+        setPwdErrors([]);
+      }, 2000);
     } catch (err: any) {
-      alert(err?.response?.data?.detail || "Nie udało się zmienić hasła.");
+      const msg = err?.response?.data?.detail || "Nie udało się zmienić hasła";
+      setPwdErrors(["❌ " + msg]);
     } finally {
       setPwdLoading(false);
     }
@@ -153,34 +170,44 @@ export default function SettingsPage() {
   };
 
   const deleteFacility = async (id: number) => {
-    if (!confirm("Usunąć zakład? Wszystkie audyty zostaną odpięte.")) return;
-    await apiDeleteFacility(id);
-    setFacilities((fs) => fs.filter((f) => f.id !== id));
-    if (selectedFacId === id) setSelectedFacId(null);
+    if (!confirm("Czy na pewno chcesz usunąć ten zakład?")) return;
+    try {
+      await apiDeleteFacility(id);
+      setFacilities((fs) => fs.filter((f) => f.id !== id));
+      if (selectedFacId === id) setSelectedFacId(null);
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || "Błąd usunięcia zakładu.");
+    }
   };
 
-  // ─── norm ─────────────────────────────────────────────────
+  // ─── norms ────────────────────────────────────────────────
   const addNorm = async () => {
-    if (!newNorm.trim() || !selectedFacId) return;
+    if (!selectedFacId || !newNorm.trim()) return;
     setNormLoading(true);
     try {
-      const n = await apiAddNorm(selectedFacId, newNorm.trim());
-      setNorms((prev) => [...prev, n]);
+      const added = await apiAddNorm(selectedFacId, newNorm);
+      setNorms((ns) => [added, ...ns]);
       setNewNorm("");
-    } catch {
-      alert("Nie udało się dodać normy.");
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || "Błąd dodania normy.");
     } finally {
       setNormLoading(false);
     }
   };
 
-  const deleteNorm = async (id: number) => {
-    await apiDeleteNorm(id);
-    setNorms((ns) => ns.filter((n) => n.id !== id));
+  const deleteNormItem = async (id: number) => {
+    try {
+      await apiDeleteNorm(id);
+      setNorms((ns) => ns.filter((n) => n.id !== id));
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || "Błąd usunięcia normy.");
+    }
   };
 
-  const handleLogout = () => {
-    if (confirm("Czy na pewno chcesz się wylogować?")) logout();
+  // ─── logout ───────────────────────────────────────────────
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
   };
 
   const cardStyle = {
@@ -190,15 +217,6 @@ export default function SettingsPage() {
 
   return (
     <div className={styles.safe} style={{ backgroundColor: colors.bg }}>
-      <div
-        className={styles.topBar}
-        style={{ borderColor: colors.border, backgroundColor: colors.bgCard }}
-      >
-        <h1 className={styles.title} style={{ color: colors.text }}>
-          Ustawienia
-        </h1>
-      </div>
-
       <div className={styles.container}>
         {/* Profile */}
         <div className={styles.card} style={cardStyle}>
@@ -302,378 +320,259 @@ export default function SettingsPage() {
               <button
                 onClick={() => startEditFac(f)}
                 style={{
-                  background: "none",
+                  padding: "4px 10px",
+                  borderRadius: 6,
                   border: "none",
                   cursor: "pointer",
-                  color: colors.accent,
-                  fontSize: 16,
+                  fontSize: 12,
+                  backgroundColor: colors.bgSecondary,
+                  color: colors.textSecondary,
                 }}
               >
-                ✏️
+                Edytuj
               </button>
               <button
                 onClick={() => deleteFacility(f.id)}
                 style={{
-                  background: "none",
+                  padding: "4px 10px",
+                  borderRadius: 6,
                   border: "none",
                   cursor: "pointer",
+                  fontSize: 12,
+                  backgroundColor: colors.danger + "20",
                   color: colors.danger,
-                  fontSize: 16,
                 }}
               >
-                🗑️
+                Usuń
               </button>
             </div>
           ))}
 
-          {/* Norms panel */}
-          {selectedFacId != null && (
-            <div
-              style={{
-                marginTop: 14,
-                padding: 12,
-                backgroundColor: colors.bgSecondary,
-                borderRadius: 10,
-              }}
-            >
-              <p
-                style={{
-                  color: colors.textSecondary,
-                  fontWeight: 600,
-                  fontSize: 13,
-                  marginBottom: 8,
-                }}
-              >
-                Normy dla:{" "}
-                {facilities.find((f) => f.id === selectedFacId)?.name}
-              </p>
-              {norms.map((n) => (
-                <div
-                  key={n.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 6,
-                  }}
-                >
-                  <span style={{ flex: 1, color: colors.text, fontSize: 13 }}>
-                    {n.norm_name}
-                  </span>
-                  <button
-                    onClick={() => deleteNorm(n.id)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: colors.danger,
-                      fontSize: 14,
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <input
-                  value={newNorm}
-                  onChange={(e) => setNewNorm(e.target.value)}
-                  placeholder="np. PN-EN ISO 9001:2015"
-                  style={{
-                    flex: 1,
-                    padding: "7px 12px",
-                    borderRadius: 8,
-                    border: `1px solid ${colors.border}`,
-                    backgroundColor: colors.bgCard,
-                    color: colors.text,
-                    fontSize: 13,
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && addNorm()}
-                />
-                <button
-                  onClick={addNorm}
-                  disabled={normLoading || !newNorm.trim()}
-                  style={{
-                    padding: "7px 16px",
-                    borderRadius: 8,
-                    border: "none",
-                    backgroundColor: colors.accent,
-                    color: "#fff",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    opacity: normLoading ? 0.6 : 1,
-                  }}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          )}
+          <button
+            onClick={() => {
+              setEditingFac(null);
+              setNewFacName("");
+              setNewFacAddr("");
+              setNewFacLogo("");
+              setShowFacForm(!showFacForm);
+            }}
+            style={{
+              marginTop: 12,
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+              backgroundColor: colors.accent,
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            {showFacForm ? "Anuluj" : "+ Dodaj zakład"}
+          </button>
 
-          {/* Add/Edit facility form */}
           {showFacForm && (
-            <div
-              style={{
-                marginTop: 14,
-                padding: 12,
-                backgroundColor: colors.bgSecondary,
-                borderRadius: 10,
+            <form
+              className={styles.facForm}
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveFacility();
               }}
             >
-              <p
-                style={{ color: colors.text, fontWeight: 600, marginBottom: 8 }}
-              >
-                {editingFac ? "Edytuj zakład" : "Nowy zakład"}
-              </p>
               {[
                 {
-                  label: "Nazwa *",
+                  label: "Nazwa zakładu",
                   value: newFacName,
                   setter: setNewFacName,
-                  ph: "Fabryka Kowalski Sp. z o.o.",
                 },
-                {
-                  label: "Adres",
-                  value: newFacAddr,
-                  setter: setNewFacAddr,
-                  ph: "ul. Przemysłowa 1, Warszawa",
-                },
-              ].map((f) => (
-                <div key={f.label} style={{ marginBottom: 10 }}>
+                { label: "Adres", value: newFacAddr, setter: setNewFacAddr },
+              ].map((field) => (
+                <div key={field.label} className={styles.inputGroup}>
                   <label
-                    style={{
-                      color: colors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
+                    className={styles.label}
+                    style={{ color: colors.textSecondary }}
                   >
-                    {f.label}
+                    {field.label}
                   </label>
                   <input
-                    value={f.value}
-                    onChange={(e) => f.setter(e.target.value)}
-                    placeholder={f.ph}
+                    className={styles.input}
                     style={{
-                      display: "block",
-                      width: "100%",
-                      marginTop: 4,
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: `1px solid ${colors.border}`,
-                      backgroundColor: colors.bgCard,
+                      backgroundColor: colors.bgSecondary,
+                      borderColor: colors.border,
                       color: colors.text,
-                      fontSize: 14,
-                      boxSizing: "border-box",
                     }}
+                    value={field.value}
+                    onChange={(e) => field.setter(e.target.value)}
+                    placeholder={field.label}
                   />
                 </div>
               ))}
-              <div style={{ marginBottom: 10 }}>
+              <div className={styles.inputGroup}>
                 <label
-                  style={{
-                    color: colors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
+                  className={styles.label}
+                  style={{ color: colors.textSecondary }}
                 >
-                  Logo zakładu
+                  Logo
                 </label>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    marginTop: 4,
-                  }}
-                >
-                  {newFacLogo && (
-                    <img
-                      src={
-                        newFacLogo.startsWith("data:")
-                          ? newFacLogo
-                          : `data:image/png;base64,${newFacLogo}`
-                      }
-                      alt="logo"
-                      style={{
-                        width: 40,
-                        height: 40,
-                        objectFit: "contain",
-                        borderRadius: 6,
-                      }}
-                    />
-                  )}
-                  <label
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoFile}
+                  style={{ color: colors.text }}
+                />
+                {newFacLogo && (
+                  <img
+                    src={newFacLogo}
+                    alt="logo"
                     style={{
-                      padding: "7px 14px",
-                      borderRadius: 8,
-                      border: `1px solid ${colors.border}`,
-                      backgroundColor: colors.bgCard,
-                      color: colors.textSecondary,
-                      cursor: "pointer",
-                      fontSize: 13,
+                      marginTop: 8,
+                      width: 48,
+                      height: 48,
+                      objectFit: "contain",
+                      borderRadius: 4,
                     }}
-                  >
-                    📁 Wybierz plik
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoFile}
-                      style={{ display: "none" }}
-                    />
-                  </label>
-                  {newFacLogo && (
-                    <button
-                      onClick={() => setNewFacLogo("")}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: colors.danger,
-                      }}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+                  />
+                )}
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  onClick={saveFacility}
-                  disabled={facLoading}
-                  style={{
-                    flex: 1,
-                    padding: "9px 0",
-                    borderRadius: 8,
-                    border: "none",
-                    backgroundColor: colors.accent,
-                    color: "#fff",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    opacity: facLoading ? 0.6 : 1,
-                  }}
-                >
-                  {facLoading ? "Zapisywanie..." : "Zapisz"}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowFacForm(false);
-                    setEditingFac(null);
-                    setNewFacName("");
-                    setNewFacAddr("");
-                    setNewFacLogo("");
-                  }}
-                  style={{
-                    padding: "9px 20px",
-                    borderRadius: 8,
-                    border: `1px solid ${colors.border}`,
-                    backgroundColor: colors.bgCard,
-                    color: colors.textSecondary,
-                    cursor: "pointer",
-                  }}
-                >
-                  Anuluj
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!showFacForm && (
-            <button
-              onClick={() => {
-                setShowFacForm(true);
-                setEditingFac(null);
-                setNewFacName("");
-                setNewFacAddr("");
-                setNewFacLogo("");
-              }}
-              style={{
-                marginTop: 12,
-                padding: "8px 18px",
-                borderRadius: 8,
-                border: `1px solid ${colors.accent}`,
-                backgroundColor: colors.accentLight,
-                color: colors.accent,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontSize: 13,
-              }}
-            >
-              + Dodaj zakład
-            </button>
+              <button
+                className={styles.btn}
+                style={{
+                  backgroundColor: colors.accent,
+                  opacity: facLoading ? 0.7 : 1,
+                }}
+                type="submit"
+                disabled={facLoading}
+              >
+                {facLoading ? (
+                  <span className={styles.spinner}></span>
+                ) : (
+                  <span className={styles.btnText}>
+                    {editingFac ? "Zaktualizuj" : "Dodaj"} zakład
+                  </span>
+                )}
+              </button>
+            </form>
           )}
         </div>
 
-        {/* Personalization */}
-        <div className={styles.card} style={cardStyle}>
-          <h2 className={styles.cardHeader} style={{ color: colors.text }}>
-            🎨 Personalizacja
-          </h2>
-          <div className={styles.row}>
-            <span className={styles.rowLabel} style={{ color: colors.text }}>
-              Tryb ciemny
-            </span>
-            <label className={styles.switch}>
-              <input type="checkbox" checked={isDark} onChange={toggleTheme} />
-              <span
-                className={styles.slider}
+        {/* Norms */}
+        {selectedFacId && (
+          <div className={styles.card} style={cardStyle}>
+            <h2 className={styles.cardHeader} style={{ color: colors.text }}>
+              📋 Normy dla wybranego zakładu
+            </h2>
+            {norms.map((n) => (
+              <div
+                key={n.id}
                 style={{
-                  backgroundColor: isDark ? colors.accent : colors.border,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 0",
+                  borderBottom: `1px solid ${colors.border}`,
                 }}
               >
-                <span
-                  className={styles.sliderKnob}
+                <p style={{ color: colors.text, fontSize: 13 }}>
+                  {n.norm_name}
+                </p>
+                <button
+                  onClick={() => deleteNormItem(n.id)}
                   style={{
-                    backgroundColor: isDark ? "#fff" : colors.textMuted,
-                    transform: isDark ? "translateX(20px)" : "translateX(0px)",
+                    padding: "4px 8px",
+                    borderRadius: 4,
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    backgroundColor: colors.danger + "20",
+                    color: colors.danger,
                   }}
-                />
-              </span>
+                >
+                  Usuń
+                </button>
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <input
+                className={styles.input}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.bgSecondary,
+                  borderColor: colors.border,
+                  color: colors.text,
+                }}
+                value={newNorm}
+                onChange={(e) => setNewNorm(e.target.value)}
+                placeholder="Nazwa normy..."
+              />
+              <button
+                onClick={addNorm}
+                disabled={normLoading || !newNorm.trim()}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  border: "none",
+                  cursor:
+                    normLoading || !newNorm.trim() ? "not-allowed" : "pointer",
+                  backgroundColor: colors.accent,
+                  color: "#fff",
+                  fontWeight: 600,
+                  opacity: normLoading || !newNorm.trim() ? 0.5 : 1,
+                }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Theme */}
+        <div className={styles.card} style={cardStyle}>
+          <h2 className={styles.cardHeader} style={{ color: colors.text }}>
+            🎨 Wygląd
+          </h2>
+          <div className={styles.themeRow}>
+            <div className={styles.themeLabel}>
+              <span>🌙</span>
+              <span>Ciemny motyw</span>
+            </div>
+            <label className={styles.switch}>
+              <input type="checkbox" checked={isDark} onChange={toggleTheme} />
+              <span className={styles.slider}></span>
             </label>
           </div>
-          <div
-            className={styles.separator}
-            style={{ backgroundColor: colors.border }}
-          ></div>
-          <span
-            className={styles.rowLabel}
-            style={{ color: colors.text, marginBottom: 4 }}
-          >
-            Kolor akcentu
-          </span>
-          <div className={styles.hueRow}>
-            {[0, 35, 60, 145, 190, 225, 275, 315].map((h) => (
-              <button
-                key={h}
-                className={`${styles.hueCircle} ${Math.abs(hue - h) < 15 ? styles.hueCircleActive : ""}`}
-                style={{ backgroundColor: `hsl(${h}, 85%, 55%)` }}
-                onClick={() => setHue(h)}
-              />
-            ))}
-          </div>
-          <div
-            className={styles.accentPreview}
-            style={{
-              backgroundColor: colors.accentLight,
-              borderColor: colors.accent,
-            }}
-          >
-            <span
-              className={styles.accentPreviewText}
-              style={{ color: colors.accent }}
-            >
-              Podgląd koloru
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ color: colors.textSecondary }}>Odcień akcentu:</span>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              value={hue}
+              onChange={(e) => setHue(parseInt(e.target.value))}
+              style={{ flex: 1, maxWidth: 150 }}
+            />
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                backgroundColor: colors.accent,
+                border: `2px solid ${colors.border}`,
+              }}
+            />
           </div>
         </div>
 
-        {/* Security */}
+        {/* Security - ZMIENIONE */}
         <div className={styles.card} style={cardStyle}>
           <h2 className={styles.cardHeader} style={{ color: colors.text }}>
             🔐 Bezpieczeństwo
           </h2>
           <button
             className={styles.securityBtn}
-            onClick={() => setShowPwdForm(!showPwdForm)}
+            onClick={() => {
+              setShowPwdForm(!showPwdForm);
+              setPwdErrors([]);
+            }}
             style={{ color: colors.accent }}
           >
             {showPwdForm ? "Anuluj zmianę hasła" : "Zmień hasło"}
@@ -707,9 +606,85 @@ export default function SettingsPage() {
                     onChange={(e) => field.setter(e.target.value)}
                     type="password"
                     placeholder="••••••••"
+                    autoComplete="new-password" // KLUCZOWE: zabija okienko z mailami
                   />
                 </div>
               ))}
+
+              {/* Wymagania hasła */}
+              <div
+                style={{
+                  padding: "12px",
+                  borderRadius: 6,
+                  backgroundColor: colors.bgSecondary,
+                  marginBottom: 12,
+                }}
+              >
+                <p
+                  style={{
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    marginBottom: 6,
+                  }}
+                >
+                  📋 Wymagania:
+                </p>
+                <p
+                  style={{
+                    color:
+                      newPwd.length >= 8 ? colors.success : colors.textMuted,
+                    fontSize: 12,
+                  }}
+                >
+                  {newPwd.length >= 8 ? "✅" : "❌"} Minimum 8 znaków
+                </p>
+                <p
+                  style={{
+                    color:
+                      newPwd === confirmPwd && newPwd.length > 0
+                        ? colors.success
+                        : colors.textMuted,
+                    fontSize: 12,
+                  }}
+                >
+                  {newPwd === confirmPwd && newPwd.length > 0 ? "✅" : "❌"}{" "}
+                  Hasła się zgadzają
+                </p>
+                <p
+                  style={{
+                    color:
+                      newPwd.length > 0 && oldPwd !== newPwd
+                        ? colors.success
+                        : colors.textMuted,
+                    fontSize: 12,
+                  }}
+                >
+                  {newPwd.length > 0 && oldPwd !== newPwd ? "✅" : "❌"} Inne
+                  niż stare hasło
+                </p>
+              </div>
+
+              {/* Błędy/komunikaty */}
+              {pwdErrors.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  {pwdErrors.map((err, i) => (
+                    <p
+                      key={i}
+                      style={{
+                        color: err.includes("✅")
+                          ? colors.success
+                          : colors.danger,
+                        fontSize: 13,
+                        marginBottom: 4,
+                        lineHeight: "1.3",
+                      }}
+                    >
+                      {err}
+                    </p>
+                  ))}
+                </div>
+              )}
+
               <button
                 className={styles.btn}
                 style={{

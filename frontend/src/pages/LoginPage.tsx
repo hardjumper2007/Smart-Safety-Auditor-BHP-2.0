@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -20,14 +21,16 @@ export default function LoginPage() {
     e?.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
 
+    setError("");
+
     if (!cleanEmail || !password) {
-      alert("Wprowadź adres email oraz hasło.");
+      setError("❌ Wprowadź adres email oraz hasło");
       return;
     }
 
     const emailRegex = /\S+@\S+\.\S+/;
     if (!emailRegex.test(cleanEmail)) {
-      alert("Wprowadź poprawny adres email.");
+      setError("❌ Wprowadź poprawny adres email");
       return;
     }
 
@@ -37,8 +40,9 @@ export default function LoginPage() {
       login(userData);
       navigate("/");
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || "Nieprawidłowy email lub hasło.";
-      alert(msg);
+      const msg =
+        err?.response?.data?.detail || "Nieprawidłowy email lub hasło";
+      setError("❌ " + msg);
     } finally {
       setLoading(false);
     }
@@ -79,7 +83,10 @@ export default function LoginPage() {
           </h2>
 
           <div className={styles.inputGroup}>
-            <label className={styles.label} style={{ color: colors.textSecondary }}>
+            <label
+              className={styles.label}
+              style={{ color: colors.textSecondary }}
+            >
               Email
             </label>
             <input
@@ -105,7 +112,10 @@ export default function LoginPage() {
           </div>
 
           <div className={styles.inputGroup}>
-            <label className={styles.label} style={{ color: colors.textSecondary }}>
+            <label
+              className={styles.label}
+              style={{ color: colors.textSecondary }}
+            >
               Hasło
             </label>
             <input
@@ -122,6 +132,20 @@ export default function LoginPage() {
               type="password"
             />
           </div>
+
+          {/* Błąd */}
+          {error && (
+            <p
+              style={{
+                color: colors.danger,
+                fontSize: 13,
+                marginBottom: 12,
+                lineHeight: "1.3",
+              }}
+            >
+              {error}
+            </p>
+          )}
 
           <button
             className={styles.btn}
@@ -140,8 +164,15 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <Link to="/register" className={styles.link} style={{ opacity: loading ? 0.5 : 1 }}>
-          <p className={styles.linkText} style={{ color: colors.textSecondary }}>
+        <Link
+          to="/register"
+          className={styles.link}
+          style={{ opacity: loading ? 0.5 : 1 }}
+        >
+          <p
+            className={styles.linkText}
+            style={{ color: colors.textSecondary }}
+          >
             Nie masz konta?{" "}
             <span style={{ color: colors.accent, fontWeight: 700 }}>
               Zarejestruj się

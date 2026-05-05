@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passRef = useRef<HTMLInputElement>(null);
@@ -22,33 +23,40 @@ export default function RegisterPage() {
 
   const handleRegister = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    const newErrors: string[] = [];
+
     const cleanName = fullName.trim();
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanName || !cleanEmail || !password) {
-      alert("Wszystkie pola są wymagane.");
-      return;
+      newErrors.push("❌ Wszystkie pola są wymagane");
+    }
+    if (cleanEmail && !/\S+@\S+\.\S+/.test(cleanEmail)) {
+      newErrors.push("❌ Nieprawidłowy adres email");
+    }
+    if (password && password.length < 8) {
+      newErrors.push("❌ Hasło musi mieć co najmniej 8 znaków");
     }
     if (password !== confirm) {
-      alert("Hasła nie są identyczne.");
-      return;
+      newErrors.push("❌ Hasła nie są identyczne");
     }
-    if (password.length < 6) {
-      alert("Dla bezpieczeństwa hasło musi mieć co najmniej 6 znaków.");
+
+    if (newErrors.length > 0) {
+      setErrors(newErrors);
       return;
     }
 
+    setErrors([]);
     setLoading(true);
     try {
       const user = await apiRegister(cleanEmail, password, cleanName);
       login(user); // Automatyczne logowanie po rejestracji
       navigate("/");
     } catch (err: any) {
-      console.error(err);
-      alert(
+      const msg =
         err?.response?.data?.detail ||
-          "Nie udało się utworzyć konta. Spróbuj innego adresu email."
-      );
+        "Nie udało się utworzyć konta. Spróbuj innego adresu email.";
+      setErrors(["❌ " + msg]);
     } finally {
       setLoading(false);
     }
@@ -85,7 +93,10 @@ export default function RegisterPage() {
           onSubmit={handleRegister}
         >
           <div className={styles.inputGroup}>
-            <label className={styles.label} style={{ color: colors.textSecondary }}>
+            <label
+              className={styles.label}
+              style={{ color: colors.textSecondary }}
+            >
               Imię i nazwisko
             </label>
             <input
@@ -109,7 +120,10 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.inputGroup}>
-            <label className={styles.label} style={{ color: colors.textSecondary }}>
+            <label
+              className={styles.label}
+              style={{ color: colors.textSecondary }}
+            >
               Email służbowy
             </label>
             <input
@@ -136,7 +150,10 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.inputGroup}>
-            <label className={styles.label} style={{ color: colors.textSecondary }}>
+            <label
+              className={styles.label}
+              style={{ color: colors.textSecondary }}
+            >
               Hasło
             </label>
             <input
@@ -161,7 +178,10 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.inputGroup}>
-            <label className={styles.label} style={{ color: colors.textSecondary }}>
+            <label
+              className={styles.label}
+              style={{ color: colors.textSecondary }}
+            >
               Powtórz hasło
             </label>
             <input
@@ -178,6 +198,65 @@ export default function RegisterPage() {
               type="password"
             />
           </div>
+
+          {/* Wymagania hasła */}
+          <div
+            style={{
+              padding: "12px",
+              borderRadius: 6,
+              backgroundColor: colors.bgSecondary,
+              marginBottom: 12,
+            }}
+          >
+            <p
+              style={{
+                color: colors.textSecondary,
+                fontSize: 12,
+                marginBottom: 6,
+              }}
+            >
+              📋 Wymagania hasła:
+            </p>
+            <p
+              style={{
+                color: password.length >= 8 ? colors.success : colors.textMuted,
+                fontSize: 12,
+              }}
+            >
+              {password.length >= 8 ? "✅" : "❌"} Minimum 8 znaków
+            </p>
+            <p
+              style={{
+                color:
+                  password === confirm && password.length > 0
+                    ? colors.success
+                    : colors.textMuted,
+                fontSize: 12,
+              }}
+            >
+              {password === confirm && password.length > 0 ? "✅" : "❌"} Hasła
+              się zgadzają
+            </p>
+          </div>
+
+          {/* Błędy */}
+          {errors.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              {errors.map((err, i) => (
+                <p
+                  key={i}
+                  style={{
+                    color: colors.danger,
+                    fontSize: 13,
+                    marginBottom: 4,
+                    lineHeight: "1.3",
+                  }}
+                >
+                  {err}
+                </p>
+              ))}
+            </div>
+          )}
 
           <button
             className={styles.btn}

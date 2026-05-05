@@ -140,8 +140,8 @@
 
 .list {
   border-radius: 14px;
-  overflow: hidden;
   border: 1px solid;
+  /* USUNIĘTE: overflow: hidden; */
 }
 
 .hazardRow {

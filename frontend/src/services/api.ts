@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "";
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -130,7 +130,7 @@ export async function apiAnalyze(
   onProgress?.("Analizowanie przez AI (może potrwać do 2 min)...");
   try {
     const res = await api.post("/api/analyze", form, {
-      timeout: 180000,
+      timeout: 9600000,
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
       headers: { "Content-Type": "multipart/form-data" },

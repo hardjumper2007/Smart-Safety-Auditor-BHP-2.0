@@ -33,7 +33,7 @@ type DragHandle =
   | "move"
   | null;
 
-// ─── Crop modal z 8 uchwytami ───────────────────────────────────────
+// ─── Crop modal ───────────────────────────────────────
 function CropModal({
   src,
   onDone,
@@ -70,35 +70,32 @@ function CropModal({
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     ctx.drawImage(img, 0, 0, CANVAS_W, CANVAS_H);
 
-    // Overlay
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(0, 0, CANVAS_W, rect.y);
     ctx.fillRect(0, rect.y + rect.h, CANVAS_W, CANVAS_H - rect.y - rect.h);
     ctx.fillRect(0, rect.y, rect.x, rect.h);
     ctx.fillRect(rect.x + rect.w, rect.y, CANVAS_W - rect.x - rect.w, rect.h);
 
-    // Ramka
     ctx.strokeStyle = "#38bdf8";
     ctx.lineWidth = 2;
     ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
 
-    // Uchwyty: 4 rogi + 4 boki
     ctx.fillStyle = "#38bdf8";
     const handles = [
-      [rect.x - HANDLE_SIZE / 2, rect.y - HANDLE_SIZE / 2], // tl
-      [rect.x + rect.w - HANDLE_SIZE / 2, rect.y - HANDLE_SIZE / 2], // tr
-      [rect.x - HANDLE_SIZE / 2, rect.y + rect.h - HANDLE_SIZE / 2], // bl
-      [rect.x + rect.w - HANDLE_SIZE / 2, rect.y + rect.h - HANDLE_SIZE / 2], // br
-      [rect.x + rect.w / 2 - HANDLE_SIZE / 2, rect.y - HANDLE_SIZE / 2], // t
+      [rect.x - HANDLE_SIZE / 2, rect.y - HANDLE_SIZE / 2],
+      [rect.x + rect.w - HANDLE_SIZE / 2, rect.y - HANDLE_SIZE / 2],
+      [rect.x - HANDLE_SIZE / 2, rect.y + rect.h - HANDLE_SIZE / 2],
+      [rect.x + rect.w - HANDLE_SIZE / 2, rect.y + rect.h - HANDLE_SIZE / 2],
+      [rect.x + rect.w / 2 - HANDLE_SIZE / 2, rect.y - HANDLE_SIZE / 2],
       [
         rect.x + rect.w / 2 - HANDLE_SIZE / 2,
         rect.y + rect.h - HANDLE_SIZE / 2,
-      ], // b
-      [rect.x - HANDLE_SIZE / 2, rect.y + rect.h / 2 - HANDLE_SIZE / 2], // l
+      ],
+      [rect.x - HANDLE_SIZE / 2, rect.y + rect.h / 2 - HANDLE_SIZE / 2],
       [
         rect.x + rect.w - HANDLE_SIZE / 2,
         rect.y + rect.h / 2 - HANDLE_SIZE / 2,
-      ], // r
+      ],
     ];
     handles.forEach(([x, y]) => {
       ctx.fillRect(x, y, HANDLE_SIZE, HANDLE_SIZE);
@@ -122,20 +119,17 @@ function CropModal({
   const getHandle = (mx: number, my: number): DragHandle => {
     const tol = 10;
     const { x, y, w, h } = rect;
-
     if (Math.abs(mx - x) < tol && Math.abs(my - y) < tol) return "tl";
     if (Math.abs(mx - (x + w)) < tol && Math.abs(my - y) < tol) return "tr";
     if (Math.abs(mx - x) < tol && Math.abs(my - (y + h)) < tol) return "bl";
     if (Math.abs(mx - (x + w)) < tol && Math.abs(my - (y + h)) < tol)
       return "br";
-
     if (Math.abs(mx - (x + w / 2)) < tol && Math.abs(my - y) < tol) return "t";
     if (Math.abs(mx - (x + w / 2)) < tol && Math.abs(my - (y + h)) < tol)
       return "b";
     if (Math.abs(mx - x) < tol && Math.abs(my - (y + h / 2)) < tol) return "l";
     if (Math.abs(mx - (x + w)) < tol && Math.abs(my - (y + h / 2)) < tol)
       return "r";
-
     if (mx > x && mx < x + w && my > y && my < y + h) return "move";
     return null;
   };
@@ -184,19 +178,16 @@ function CropModal({
         w = start.rw - (newX - start.rx);
         x = newX;
       }
-      if (dragging.includes("r")) {
+      if (dragging.includes("r"))
         w = clamp(start.rw + dx, 40, CANVAS_W - start.rx);
-      }
       if (dragging.includes("t")) {
         const newY = clamp(start.ry + dy, 0, start.ry + start.rh - 40);
         h = start.rh - (newY - start.ry);
         y = newY;
       }
-      if (dragging.includes("b")) {
+      if (dragging.includes("b"))
         h = clamp(start.rh + dy, 40, CANVAS_H - start.ry);
-      }
     }
-
     setRect({ x, y, w, h });
   };
 
@@ -209,19 +200,18 @@ function CropModal({
     const out = document.createElement("canvas");
     out.width = rect.w * scaleX;
     out.height = rect.h * scaleY;
-    out
-      .getContext("2d")!
-      .drawImage(
-        img,
-        rect.x * scaleX,
-        rect.y * scaleY,
-        rect.w * scaleX,
-        rect.h * scaleY,
-        0,
-        0,
-        out.width,
-        out.height,
-      );
+    const ctx = out.getContext("2d")!;
+    ctx.drawImage(
+      img,
+      rect.x * scaleX,
+      rect.y * scaleY,
+      rect.w * scaleX,
+      rect.h * scaleY,
+      0,
+      0,
+      out.width,
+      out.height,
+    );
     out.toBlob(
       (blob) => {
         if (!blob) return;
@@ -399,8 +389,7 @@ function CameraModal({
   );
 }
 
-// ─── Main component ──────────────────────────────────────────
-
+// ─── Main ──────────────────────────────────────────────────
 export default function HomePage() {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -412,6 +401,7 @@ export default function HomePage() {
   );
   const [facilityNorms, setFacilityNorms] = useState<NormRow[]>([]);
   const [selectedNorm, setSelectedNorm] = useState("PN-ISO 45001:2018");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const [imageFile, setImageFile] = useState<File | Blob | null>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -423,6 +413,7 @@ export default function HomePage() {
 
   const [loading, setLoading] = useState(false);
   const [progressMsg, setProgressMsg] = useState("");
+  const [fileError, setFileError] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -460,6 +451,11 @@ export default function HomePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setFileError("");
+    if (!file.type.startsWith("image/")) {
+      setFileError("❌ Plik musi być obrazem (JPG, PNG, GIF, WebP itd.).");
+      return;
+    }
     const url = URL.createObjectURL(file);
     setCropSrc(url);
     setImageFile(null);
@@ -477,12 +473,17 @@ export default function HomePage() {
     setCropSrc(url);
     setImageFile(null);
     setImageUri(null);
-    (window as any)._pendingCameraBlob = blob;
   };
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setVideoFile(file);
+    if (!file) return;
+    setFileError("");
+    if (!file.type.startsWith("video/")) {
+      setFileError("❌ Plik musi być wideo (MP4, MOV, AVI itd.).");
+      return;
+    }
+    setVideoFile(file);
   };
 
   const clearMedia = () => {
@@ -490,6 +491,7 @@ export default function HomePage() {
     setImageUri(null);
     setVideoFile(null);
     setCropSrc(null);
+    setFileError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (videoInputRef.current) videoInputRef.current.value = "";
   };
@@ -515,6 +517,11 @@ export default function HomePage() {
       const facId = selectedFacility ? String(selectedFacility.id) : "";
       let res: any;
       if (isPhoto) {
+        if (!imageFile!.type.startsWith("image/")) {
+          setFileError("❌ Błąd: Wybrany plik nie jest obrazem.");
+          setLoading(false);
+          return;
+        }
         res = await apiAnalyze(
           imageFile!,
           user.user_id,
@@ -523,6 +530,11 @@ export default function HomePage() {
           (msg) => setProgressMsg(msg),
         );
       } else {
+        if (!videoFile!.type.startsWith("video/")) {
+          setFileError("❌ Błąd: Wybrany plik nie jest wideo.");
+          setLoading(false);
+          return;
+        }
         res = await apiAnalyzeVideo(
           videoFile!,
           user.user_id,
@@ -533,9 +545,8 @@ export default function HomePage() {
       }
 
       if (res?.not_workplace) {
-        alert(
-          "Zdjęcie niemożliwe do analizy — nie przedstawia sytuacji w środowisku pracy.",
-        );
+        setFileError("⚠️ Zdjęcie/film nie przedstawia stanowiska pracy.");
+        setLoading(false);
         return;
       }
       navigate("/analysis-result", {
@@ -546,10 +557,8 @@ export default function HomePage() {
         },
       });
     } catch (err: any) {
-      alert(
-        "Błąd analizy: " +
-          (err?.response?.data?.detail || err.message || "Nieznany błąd"),
-      );
+      const msg = err?.response?.data?.detail || "Błąd analizy.";
+      setFileError("❌ " + msg);
     } finally {
       setLoading(false);
       setProgressMsg("");
@@ -557,67 +566,38 @@ export default function HomePage() {
   };
 
   return (
-    <div className={styles.container} style={{ backgroundColor: colors.bg }}>
+    <div className={styles.safe} style={{ backgroundColor: colors.bg }}>
       {cropSrc && (
         <CropModal
           src={cropSrc}
-          colors={colors}
           onDone={handleCropDone}
-          onCancel={() => {
-            const pending = (window as any)._pendingCameraBlob;
-            if (pending) {
-              setImageFile(pending);
-              setImageUri(cropSrc);
-            }
-            setCropSrc(null);
-          }}
+          onCancel={() => setCropSrc(null)}
+          colors={colors}
         />
       )}
-
       {showCamera && (
         <CameraModal
-          colors={colors}
           onCapture={handleCameraCapture}
           onClose={() => setShowCamera(false)}
+          colors={colors}
         />
       )}
 
-      <div className={styles.header}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {selectedFacility?.logo_base64 && (
-            <img
-              src={
-                selectedFacility.logo_base64.startsWith("data:")
-                  ? selectedFacility.logo_base64
-                  : `data:image/png;base64,${selectedFacility.logo_base64}`
-              }
-              alt="logo zakładu"
-              style={{
-                width: 40,
-                height: 40,
-                objectFit: "contain",
-                borderRadius: 6,
-              }}
-            />
-          )}
+      <div className={styles.container}>
+        <div className={styles.header}>
           <div>
             <h1 className={styles.greeting} style={{ color: colors.text }}>
-              Cześć, {user?.full_name || "Użytkowniku"}
+              Witaj, {user?.full_name?.split(" ")[0] || "tu"} 👋
             </h1>
-            <p className={styles.sub} style={{ color: colors.textMuted }}>
-              Sprawdź zgodność stanowiska z normami
+            <p className={styles.sub} style={{ color: colors.textSecondary }}>
+              Gotowy na audyt BHP?
             </p>
           </div>
+          <div className={styles.badge}>
+            <span className={styles.badgeText}>PRO</span>
+          </div>
         </div>
-        <div
-          className={styles.badge}
-          style={{ backgroundColor: colors.accent }}
-        >
-          <span className={styles.badgeText}>BHP</span>
-        </div>
-      </div>
 
-      {facilities.length > 0 && (
         <div className={styles.section}>
           <h2
             className={styles.sectionTitle}
@@ -625,302 +605,355 @@ export default function HomePage() {
           >
             ZAKŁAD
           </h2>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {facilities.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setSelectedFacility(f)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 20,
-                  border: "1.5px solid",
-                  borderColor:
-                    selectedFacility?.id === f.id
-                      ? colors.accent
-                      : colors.border,
-                  backgroundColor:
-                    selectedFacility?.id === f.id
-                      ? colors.accentLight
-                      : colors.bgCard,
-                  color:
-                    selectedFacility?.id === f.id
-                      ? colors.accent
-                      : colors.textSecondary,
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
+
+          {/* DROPDOWN BOOTSTRAP */}
+          <div className={styles.dropdown}>
+            <button
+              type="button"
+              className={styles.dropdownToggle}
+              style={{
+                backgroundColor: colors.bgSecondary,
+                borderColor: colors.border,
+                color: colors.text,
+              }}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              aria-expanded={dropdownOpen}
+            >
+              <span className={styles.dropdownValue}>
+                {selectedFacility
+                  ? selectedFacility.name
+                  : "Brak wybranego zakładu"}
+              </span>
+              <svg
+                className={`${styles.dropdownChevron} ${dropdownOpen ? styles.open : ""}`}
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
               >
-                {f.name}
+                <path
+                  d="M4 6L8 10L12 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            {dropdownOpen && (
+              <>
+                <div
+                  className={styles.dropdownBackdrop}
+                  onClick={() => setDropdownOpen(false)}
+                />
+                <div
+                  className={styles.dropdownMenu}
+                  style={{
+                    backgroundColor: colors.bgCard,
+                    borderColor: colors.border,
+                    boxShadow: `0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px ${colors.border}`,
+                  }}
+                >
+                  <button
+                    className={`${styles.dropdownItem} ${!selectedFacility ? styles.active : ""}`}
+                    style={{
+                      color: !selectedFacility ? colors.accent : colors.text,
+                    }}
+                    onClick={() => {
+                      setSelectedFacility(null);
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    <span>Brak wybranego zakładu</span>
+                    {!selectedFacility && (
+                      <span className={styles.check}>✓</span>
+                    )}
+                  </button>
+                  {facilities.map((f) => (
+                    <button
+                      key={f.id}
+                      className={`${styles.dropdownItem} ${selectedFacility?.id === f.id ? styles.active : ""}`}
+                      style={{
+                        color:
+                          selectedFacility?.id === f.id
+                            ? colors.accent
+                            : colors.text,
+                      }}
+                      onClick={() => {
+                        setSelectedFacility(f);
+                        setDropdownOpen(false);
+                      }}
+                    >
+                      <span>{f.name}</span>
+                      {selectedFacility?.id === f.id && (
+                        <span className={styles.check}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <h2
+            className={styles.sectionTitle}
+            style={{ color: colors.textSecondary }}
+          >
+            NORMA
+          </h2>
+          <div className={styles.normList}>
+            {normOptions.map((n) => (
+              <button
+                key={n}
+                className={`${styles.normChip} ${selectedNorm === n ? styles.normChipActive : ""}`}
+                style={{
+                  borderColor:
+                    selectedNorm === n ? colors.accent : colors.border,
+                  backgroundColor:
+                    selectedNorm === n ? colors.accent : "transparent",
+                }}
+                onClick={() => setSelectedNorm(n)}
+              >
+                <span
+                  className={styles.normChipText}
+                  style={{
+                    color: selectedNorm === n ? "#fff" : colors.textSecondary,
+                  }}
+                >
+                  {n}
+                </span>
               </button>
             ))}
           </div>
         </div>
-      )}
 
-      <div className={styles.section}>
-        <h2
-          className={styles.sectionTitle}
-          style={{ color: colors.textSecondary }}
+        <div
+          style={{
+            display: "flex",
+            gap: 0,
+            marginBottom: 12,
+            borderRadius: 10,
+            overflow: "hidden",
+            border: `1px solid ${colors.border}`,
+          }}
         >
-          NORMA
-        </h2>
-        <div className={styles.normList}>
-          {normOptions.map((n) => (
+          {(["photo", "video"] as const).map((m) => (
             <button
-              key={n}
-              className={`${styles.normChip} ${selectedNorm === n ? styles.normChipActive : ""}`}
-              style={{
-                borderColor: selectedNorm === n ? colors.accent : colors.border,
-                backgroundColor:
-                  selectedNorm === n ? colors.accentLight : colors.bgCard,
+              key={m}
+              onClick={() => {
+                setMode(m);
+                clearMedia();
               }}
-              onClick={() => setSelectedNorm(n)}
+              style={{
+                flex: 1,
+                padding: "10px 0",
+                border: "none",
+                cursor: "pointer",
+                backgroundColor: mode === m ? colors.accent : colors.bgCard,
+                color: mode === m ? "#fff" : colors.textSecondary,
+                fontWeight: mode === m ? 700 : 400,
+                fontSize: 14,
+              }}
             >
-              <span
-                className={styles.normChipText}
-                style={{
-                  color:
-                    selectedNorm === n ? colors.accent : colors.textSecondary,
-                }}
-              >
-                {n}
-              </span>
+              {m === "photo" ? "📷 Zdjęcie" : "🎬 Film"}
             </button>
           ))}
         </div>
-      </div>
 
-      <div
-        style={{
-          display: "flex",
-          gap: 0,
-          marginBottom: 12,
-          borderRadius: 10,
-          overflow: "hidden",
-          border: `1px solid ${colors.border}`,
-        }}
-      >
-        {(["photo", "video"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => {
-              setMode(m);
-              clearMedia();
-            }}
+        {mode === "photo" ? (
+          <div
+            className={styles.imageArea}
             style={{
-              flex: 1,
-              padding: "10px 0",
-              border: "none",
-              cursor: "pointer",
-              backgroundColor: mode === m ? colors.accent : colors.bgCard,
-              color: mode === m ? "#fff" : colors.textSecondary,
-              fontWeight: mode === m ? 700 : 400,
-              fontSize: 14,
+              borderColor: colors.border,
+              backgroundColor: colors.bgSecondary,
             }}
           >
-            {m === "photo" ? "📷 Zdjęcie" : "🎬 Film"}
-          </button>
-        ))}
-      </div>
-
-      {mode === "photo" ? (
-        <div
-          className={styles.imageArea}
-          style={{ borderColor: colors.border }}
-        >
-          {imageUri ? (
-            <div className={styles.imageWrapper}>
-              <img
-                src={imageUri}
-                className={styles.imagePreview}
-                alt="Podgląd"
-              />
-              <button className={styles.clearImage} onClick={clearMedia}>
-                ✕
-              </button>
+            {imageUri ? (
+              <div className={styles.imageWrapper}>
+                <img
+                  src={imageUri}
+                  className={styles.imagePreview}
+                  alt="Podgląd"
+                />
+                <button className={styles.clearImage} onClick={clearMedia}>
+                  ✕
+                </button>
+                <button
+                  onClick={() => setCropSrc(imageUri)}
+                  style={{
+                    position: "absolute",
+                    bottom: 8,
+                    right: 12,
+                    background: colors.accent,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  ✂️ Przytnij
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={() => setCropSrc(imageUri)}
-                style={{
-                  position: "absolute",
-                  bottom: 8,
-                  right: 40,
-                  background: colors.accent,
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "4px 10px",
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
+                className={styles.imagePlaceholder}
+                onClick={() => fileInputRef.current?.click()}
               >
-                ✂️ Przytnij
+                <span style={{ fontSize: 56 }}>📷</span>
+                <p
+                  className={styles.placeholderText}
+                  style={{ color: colors.text }}
+                >
+                  Wybierz lub zrób zdjęcie
+                </p>
+                <p
+                  className={styles.placeholderSub}
+                  style={{ color: colors.textSecondary }}
+                >
+                  stanowiska pracy do analizy
+                </p>
               </button>
-            </div>
-          ) : (
+            )}
+          </div>
+        ) : (
+          <div
+            className={styles.imageArea}
+            style={{
+              borderColor: colors.border,
+              backgroundColor: colors.bgSecondary,
+              minHeight: 120,
+            }}
+          >
+            {videoFile ? (
+              <div style={{ textAlign: "center", padding: 16 }}>
+                <p style={{ color: colors.text, fontWeight: 600 }}>
+                  🎬 {videoFile.name}
+                </p>
+                <p style={{ color: colors.textSecondary, fontSize: 13 }}>
+                  {(videoFile.size / 1024 / 1024).toFixed(1)} MB
+                </p>
+                <button
+                  onClick={clearMedia}
+                  style={{
+                    marginTop: 8,
+                    color: colors.danger,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Usuń ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                className={styles.imagePlaceholder}
+                onClick={() => videoInputRef.current?.click()}
+              >
+                <span style={{ fontSize: 56 }}>🎬</span>
+                <p
+                  className={styles.placeholderText}
+                  style={{ color: colors.text }}
+                >
+                  Wybierz film do analizy
+                </p>
+                <p
+                  className={styles.placeholderSub}
+                  style={{ color: colors.textSecondary }}
+                >
+                  MP4, MOV, AVI (max 200 MB)
+                </p>
+              </button>
+            )}
+          </div>
+        )}
+
+        {fileError && (
+          <div
+            style={{
+              color: colors.danger,
+              marginBottom: 16,
+              fontSize: 14,
+              textAlign: "center",
+              lineHeight: "1.4",
+            }}
+          >
+            {fileError}
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+        />
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept="video/*"
+          onChange={handleVideoChange}
+          style={{ display: "none" }}
+        />
+
+        {mode === "photo" && (
+          <div className={styles.actionRow}>
             <button
-              className={styles.imagePlaceholder}
+              className={styles.actionBtn}
+              style={{
+                backgroundColor: colors.bgCard,
+                borderColor: colors.border,
+              }}
+              onClick={() => setShowCamera(true)}
+            >
+              <span className={styles.actionIcon}>📸</span>
+              <span
+                className={styles.actionLabel}
+                style={{ color: colors.text }}
+              >
+                Kamera
+              </span>
+            </button>
+            <button
+              className={styles.actionBtn}
+              style={{
+                backgroundColor: colors.bgCard,
+                borderColor: colors.border,
+              }}
               onClick={() => fileInputRef.current?.click()}
             >
-              <span style={{ fontSize: 56 }}>📷</span>
-              <p
-                className={styles.placeholderText}
-                style={{ color: colors.textMuted }}
+              <span className={styles.actionIcon}>🖼️</span>
+              <span
+                className={styles.actionLabel}
+                style={{ color: colors.text }}
               >
-                Wybierz lub zrób zdjęcie
-              </p>
-              <p
-                className={styles.placeholderSub}
-                style={{ color: colors.textMuted }}
-              >
-                stanowiska pracy do analizy
-              </p>
+                Galeria
+              </span>
             </button>
-          )}
-        </div>
-      ) : (
-        <div
-          className={styles.imageArea}
-          style={{ borderColor: colors.border, minHeight: 120 }}
-        >
-          {videoFile ? (
-            <div style={{ textAlign: "center", padding: 16 }}>
-              <p style={{ color: colors.text, fontWeight: 600 }}>
-                🎬 {videoFile.name}
-              </p>
-              <p style={{ color: colors.textMuted, fontSize: 13 }}>
-                {(videoFile.size / 1024 / 1024).toFixed(1)} MB
-              </p>
-              <button
-                onClick={clearMedia}
-                style={{
-                  marginTop: 8,
-                  color: colors.danger,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Usuń ✕
-              </button>
-            </div>
-          ) : (
-            <button
-              className={styles.imagePlaceholder}
-              onClick={() => videoInputRef.current?.click()}
-            >
-              <span style={{ fontSize: 56 }}>🎬</span>
-              <p
-                className={styles.placeholderText}
-                style={{ color: colors.textMuted }}
-              >
-                Wybierz film do analizy
-              </p>
-              <p
-                className={styles.placeholderSub}
-                style={{ color: colors.textMuted }}
-              >
-                MP4, MOV, AVI (max 200 MB)
-              </p>
-            </button>
-          )}
-        </div>
-      )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-        style={{ display: "none" }}
-      />
-      <input
-        ref={videoInputRef}
-        type="file"
-        accept="video/*"
-        onChange={handleVideoChange}
-        style={{ display: "none" }}
-      />
-
-      {mode === "photo" && (
-        <div className={styles.actionRow}>
-          <button
-            className={styles.actionBtn}
-            style={{
-              backgroundColor: colors.bgCard,
-              borderColor: colors.border,
-            }}
-            onClick={() => setShowCamera(true)}
-          >
-            <span className={styles.actionIcon}>📸</span>
-            <span className={styles.actionLabel} style={{ color: colors.text }}>
-              Kamera
-            </span>
-          </button>
-          <button
-            className={styles.actionBtn}
-            style={{
-              backgroundColor: colors.bgCard,
-              borderColor: colors.border,
-            }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <span className={styles.actionIcon}>🖼️</span>
-            <span className={styles.actionLabel} style={{ color: colors.text }}>
-              Galeria
-            </span>
-          </button>
-        </div>
-      )}
-
-      <button
-        className={`${styles.analyzeBtn} ${!(imageUri || videoFile) || loading ? styles.analyzeBtnDisabled : ""}`}
-        style={{ backgroundColor: colors.accent }}
-        onClick={handleAnalyze}
-        disabled={!(imageUri || videoFile) || loading}
-      >
-        {loading ? (
-          <>
-            <span className={styles.spinner}></span>
-            <span className={styles.analyzeBtnText}>{progressMsg}</span>
-          </>
-        ) : (
-          <span className={styles.analyzeBtnText}>
-            {mode === "photo" ? "Analizuj zdjęcie →" : "Analizuj film →"}
-          </span>
-        )}
-      </button>
-
-      <div
-        className={styles.infoCard}
-        style={{ backgroundColor: colors.bgCard, borderColor: colors.border }}
-      >
-        <h3
-          className={styles.infoTitle}
-          style={{ color: colors.textSecondary }}
-        >
-          JAK TO DZIAŁA
-        </h3>
-        {[
-          "Zrób zdjęcie lub nagraj film stanowiska pracy",
-          "Wybierz zakład i normę do sprawdzenia",
-          "Otrzymaj raport z zaleceniami i eksportuj PDF",
-        ].map((text, i) => (
-          <div key={i} className={styles.infoRow}>
-            <div
-              className={styles.infoNum}
-              style={{ backgroundColor: colors.accentLight }}
-            >
-              <span>{i + 1}</span>
-            </div>
-            <p
-              className={styles.infoText}
-              style={{ color: colors.textSecondary }}
-            >
-              {text}
-            </p>
           </div>
-        ))}
+        )}
+
+        <button
+          className={`${styles.analyzeBtn} ${!(imageUri || videoFile) || loading ? styles.analyzeBtnDisabled : ""}`}
+          style={{ backgroundColor: colors.accent }}
+          onClick={handleAnalyze}
+          disabled={!(imageUri || videoFile) || loading}
+        >
+          {loading ? (
+            <>
+              <span className={styles.spinner}></span>
+              <span className={styles.analyzeBtnText}>{progressMsg}</span>
+            </>
+          ) : (
+            <span className={styles.analyzeBtnText}>
+              {mode === "photo" ? "Analizuj zdjęcie →" : "Analizuj film →"}
+            </span>
+          )}
+        </button>
       </div>
     </div>
   );

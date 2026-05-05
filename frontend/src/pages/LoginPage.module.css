@@ -104,7 +104,9 @@
   justify-content: center;
   margin-top: 8px;
   cursor: pointer;
-  transition: transform 0.1s, opacity 0.2s;
+  transition:
+    transform 0.1s,
+    opacity 0.2s;
 }
 
 .btn:active:not(:disabled) {
